@@ -13,3 +13,7 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+.nyc_output
+test-results
+playwright-report
