@@ -24,4 +24,7 @@ test('purchase with login', async ({ page }) => {
   await page.getByRole('button', { name: 'Pay now' }).click();
 
   await expect(page.getByText('0.008')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Verify' }).click();
+  await expect(page.getByRole('heading', { name: 'JWT Pizza - valid' })).toBeVisible();
 });

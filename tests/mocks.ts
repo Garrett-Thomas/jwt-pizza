@@ -83,7 +83,14 @@ export async function basicInit(page: Page) {
     await route.fulfill({ json: { ...route.request().postDataJSON(), id: 99 } });
   });
 
+  // Place an order (POST) and get order history (GET)
   await page.route('*/**/api/order', async (route) => {
+    if (route.request().method() === 'GET') {
+      const pastOrder = { id: 23, franchiseId: 2, storeId: 4, date: '2024-06-05T05:14:40.000Z', items: [{ menuId: 1, description: 'Veggie', price: 0.0038 }] };
+      await route.fulfill({ json: { id: 1, dinerId: 3, orders: [pastOrder] } });
+      return;
+    }
+
     const orderReq = route.request().postDataJSON();
     const orderRes = {
       order: { ...orderReq, id: 23 },
@@ -91,6 +98,12 @@ export async function basicInit(page: Page) {
     };
     expect(route.request().method()).toBe('POST');
     await route.fulfill({ json: orderRes });
+  });
+
+  // Pizza Factory: verify an order JWT
+  await page.route('*/**/api/order/verify', async (route) => {
+    expect(route.request().method()).toBe('POST');
+    await route.fulfill({ json: { message: 'valid', payload: { vendor: { name: 'JWT Pizza' } } } });
   });
 
   await page.goto('/');
