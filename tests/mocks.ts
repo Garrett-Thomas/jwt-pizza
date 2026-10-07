@@ -8,6 +8,7 @@ export async function basicInit(page: Page) {
   const validUsers: Record<string, User> = {
     'd@jwt.com': { id: '3', name: 'Kai Chen', email: 'd@jwt.com', password: 'a', roles: [{ role: Role.Diner }] },
     'a@jwt.com': { id: '1', name: 'Pizza Admin', email: 'a@jwt.com', password: 'admin', roles: [{ role: Role.Admin }] },
+    'f@jwt.com': { id: '4', name: 'Frank Lee', email: 'f@jwt.com', password: 'franchisee', roles: [{ role: Role.Diner }, { role: Role.Franchisee, objectId: '2' }] },
   };
 
   await page.route('*/**/api/auth', async (route) => {
@@ -66,10 +67,20 @@ export async function basicInit(page: Page) {
     await route.fulfill({ json: franchiseRes });
   });
 
-  // Close a franchise or a store
+  // A franchisee's franchises (GET), close a franchise or a store (DELETE)
   await page.route(/\/api\/franchise\/\d+(\/store\/\d+)?$/, async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ json: [{ id: 2, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi', totalRevenue: 0.05 }] }] });
+      return;
+    }
     expect(route.request().method()).toBe('DELETE');
     await route.fulfill({ json: { message: 'deleted' } });
+  });
+
+  // Create a store
+  await page.route(/\/api\/franchise\/\d+\/store$/, async (route) => {
+    expect(route.request().method()).toBe('POST');
+    await route.fulfill({ json: { ...route.request().postDataJSON(), id: 99 } });
   });
 
   await page.route('*/**/api/order', async (route) => {
