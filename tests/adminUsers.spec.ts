@@ -42,3 +42,14 @@ test('admin pages through users', async ({ page }) => {
   await usersFooter.getByRole('button', { name: '«' }).click();
   await expect(page.getByRole('row', { name: 'Kai Chen' })).toBeVisible();
 });
+
+test('admin deletes a user', async ({ page }) => {
+  await basicInit(page);
+  await login(page, 'a@jwt.com', 'admin');
+  await page.getByRole('link', { name: 'Admin' }).click();
+
+  await page.getByRole('row', { name: 'Kai Chen' }).getByRole('button', { name: 'Delete' }).click();
+
+  await expect(page.getByRole('row', { name: 'Kai Chen' })).toBeHidden();
+  await expect(page.getByRole('row', { name: 'Alan Turing' })).toBeVisible();
+});

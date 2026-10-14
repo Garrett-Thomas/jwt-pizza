@@ -61,14 +61,22 @@ export async function basicInit(page: Page) {
     const params = new URL(route.request().url()).searchParams;
     const pageNum = Number(params.get('page'));
     const limit = Number(params.get('limit'));
-    const nameFilter = new RegExp(`^${params.get('name')!.replaceAll('*', '.*')}$`, 'i');
+    const nameFilter = new RegExp(`^${params.get('name')!.replace(/\*/g, '.*')}$`, 'i');
     const matches = Object.values(validUsers).filter((u) => nameFilter.test(u.name!));
     const users = matches.slice(pageNum * limit, (pageNum + 1) * limit).map(({ password, ...user }) => user);
     await route.fulfill({ json: { users, more: matches.length > (pageNum + 1) * limit } });
   });
 
-  // Update a user, persisting the change so a later login sees it
+  // Update a user (PUT), persisting the change so a later login sees it, or delete a user (DELETE)
   await page.route(/\/api\/user\/\d+$/, async (route) => {
+    if (route.request().method() === 'DELETE') {
+      const userId = route.request().url().split('/').pop();
+      const email = Object.keys(validUsers).find((e) => validUsers[e].id === userId);
+      delete validUsers[email!];
+      await route.fulfill({ json: { message: 'user deleted' } });
+      return;
+    }
+
     expect(route.request().method()).toBe('PUT');
     const updateReq: User = route.request().postDataJSON();
     const [oldEmail, existing] = Object.entries(validUsers).find(([, u]) => u.id === updateReq.id) ?? [];
