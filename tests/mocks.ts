@@ -9,6 +9,10 @@ export async function basicInit(page: Page) {
     'd@jwt.com': { id: '3', name: 'Kai Chen', email: 'd@jwt.com', password: 'a', roles: [{ role: Role.Diner }] },
     'a@jwt.com': { id: '1', name: 'Pizza Admin', email: 'a@jwt.com', password: 'admin', roles: [{ role: Role.Admin }] },
     'f@jwt.com': { id: '4', name: 'Frank Lee', email: 'f@jwt.com', password: 'franchisee', roles: [{ role: Role.Diner }, { role: Role.Franchisee, objectId: '2' }] },
+    'ada@jwt.com': { id: '5', name: 'Ada Lovelace', email: 'ada@jwt.com', password: 'ada', roles: [{ role: Role.Diner }] },
+    'grace@jwt.com': { id: '6', name: 'Grace Hopper', email: 'grace@jwt.com', password: 'grace', roles: [{ role: Role.Diner }] },
+    'alan@jwt.com': { id: '7', name: 'Alan Turing', email: 'alan@jwt.com', password: 'alan', roles: [{ role: Role.Diner }] },
+    'linus@jwt.com': { id: '8', name: 'Linus Torvalds', email: 'linus@jwt.com', password: 'linus', roles: [{ role: Role.Diner }] },
   };
 
   let nextUserId = 100;
@@ -49,6 +53,18 @@ export async function basicInit(page: Page) {
   await page.route('*/**/api/user/me', async (route) => {
     expect(route.request().method()).toBe('GET');
     await route.fulfill({ json: loggedInUser });
+  });
+
+  // List users (GET) with name filter and paging
+  await page.route(/\/api\/user(\?.*)?$/, async (route) => {
+    expect(route.request().method()).toBe('GET');
+    const params = new URL(route.request().url()).searchParams;
+    const pageNum = Number(params.get('page'));
+    const limit = Number(params.get('limit'));
+    const nameFilter = new RegExp(`^${params.get('name')!.replaceAll('*', '.*')}$`, 'i');
+    const matches = Object.values(validUsers).filter((u) => nameFilter.test(u.name!));
+    const users = matches.slice(pageNum * limit, (pageNum + 1) * limit).map(({ password, ...user }) => user);
+    await route.fulfill({ json: { users, more: matches.length > (pageNum + 1) * limit } });
   });
 
   // Update a user, persisting the change so a later login sees it
