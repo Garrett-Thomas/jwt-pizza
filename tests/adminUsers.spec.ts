@@ -24,3 +24,21 @@ test('admin filters users by name', async ({ page }) => {
   await expect(page.getByRole('row', { name: 'Alan Turing alan@jwt.com diner' })).toBeVisible();
   await expect(page.getByRole('row', { name: 'Kai Chen' })).toBeHidden();
 });
+
+test('admin pages through users', async ({ page }) => {
+  await basicInit(page);
+  await login(page, 'a@jwt.com', 'admin');
+  await page.getByRole('link', { name: 'Admin' }).click();
+
+  const usersFooter = page.getByRole('row').filter({ has: page.getByPlaceholder('Filter users') });
+  await expect(page.getByRole('row', { name: 'Kai Chen' })).toBeVisible();
+  await expect(usersFooter.getByRole('button', { name: '«' })).toBeDisabled();
+
+  await usersFooter.getByRole('button', { name: '»' }).click();
+  await expect(page.getByRole('row', { name: 'Linus Torvalds' })).toBeVisible();
+  await expect(page.getByRole('row', { name: 'Kai Chen' })).toBeHidden();
+  await expect(usersFooter.getByRole('button', { name: '»' })).toBeDisabled();
+
+  await usersFooter.getByRole('button', { name: '«' }).click();
+  await expect(page.getByRole('row', { name: 'Kai Chen' })).toBeVisible();
+});
