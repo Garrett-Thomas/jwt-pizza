@@ -67,7 +67,7 @@ export async function basicInit(page: Page) {
     await route.fulfill({ json: { users, more: matches.length > (pageNum + 1) * limit } });
   });
 
-  // Update a user (PUT), persisting the change so a later login sees it, or delete a user (DELETE)
+  // Update (PUT) or delete (DELETE) a user
   await page.route(/\/api\/user\/\d+$/, async (route) => {
     if (route.request().method() === 'DELETE') {
       const userId = route.request().url().split('/').pop();
