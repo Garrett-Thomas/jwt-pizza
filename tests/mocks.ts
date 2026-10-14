@@ -11,7 +11,26 @@ export async function basicInit(page: Page) {
     'f@jwt.com': { id: '4', name: 'Frank Lee', email: 'f@jwt.com', password: 'franchisee', roles: [{ role: Role.Diner }, { role: Role.Franchisee, objectId: '2' }] },
   };
 
+  let nextUserId = 100;
+
+  // Register (POST), login (PUT), and logout (DELETE)
   await page.route('*/**/api/auth', async (route) => {
+    const method = route.request().method();
+    if (method === 'DELETE') {
+      loggedInUser = undefined;
+      await route.fulfill({ json: { message: 'logout successful' } });
+      return;
+    }
+
+    if (method === 'POST') {
+      const registerReq = route.request().postDataJSON();
+      const newUser: User = { id: String(nextUserId++), name: registerReq.name, email: registerReq.email, password: registerReq.password, roles: [{ role: Role.Diner }] };
+      validUsers[newUser.email!] = newUser;
+      loggedInUser = newUser;
+      await route.fulfill({ json: { user: newUser, token: 'abcdef' } });
+      return;
+    }
+
     const loginReq = route.request().postDataJSON();
     const user = validUsers[loginReq.email];
     if (!user || user.password !== loginReq.password) {
@@ -23,13 +42,35 @@ export async function basicInit(page: Page) {
       user: loggedInUser,
       token: 'abcdef',
     };
-    expect(route.request().method()).toBe('PUT');
+    expect(method).toBe('PUT');
     await route.fulfill({ json: loginRes });
   });
 
   await page.route('*/**/api/user/me', async (route) => {
     expect(route.request().method()).toBe('GET');
     await route.fulfill({ json: loggedInUser });
+  });
+
+  // Update a user, persisting the change so a later login sees it
+  await page.route(/\/api\/user\/\d+$/, async (route) => {
+    expect(route.request().method()).toBe('PUT');
+    const updateReq: User = route.request().postDataJSON();
+    const [oldEmail, existing] = Object.entries(validUsers).find(([, u]) => u.id === updateReq.id) ?? [];
+    if (!oldEmail || !existing) {
+      await route.fulfill({ status: 404, json: { message: 'unknown user' } });
+      return;
+    }
+
+    const updatedUser: User = {
+      ...existing,
+      name: updateReq.name ?? existing.name,
+      email: updateReq.email ?? existing.email,
+      password: updateReq.password ?? existing.password,
+    };
+    delete validUsers[oldEmail];
+    validUsers[updatedUser.email!] = updatedUser;
+    loggedInUser = updatedUser;
+    await route.fulfill({ json: { user: updatedUser, token: 'abcdef' } });
   });
 
   await page.route('*/**/api/order/menu', async (route) => {
