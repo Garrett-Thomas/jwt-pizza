@@ -53,3 +53,19 @@ test('admin deletes a user', async ({ page }) => {
   await expect(page.getByRole('row', { name: 'Kai Chen' })).toBeHidden();
   await expect(page.getByRole('row', { name: 'Alan Turing' })).toBeVisible();
 });
+
+test('admin user filter applies from the first page and survives deletes', async ({ page }) => {
+  await basicInit(page);
+  await login(page, 'a@jwt.com', 'admin');
+  await page.getByRole('link', { name: 'Admin' }).click();
+
+  const usersFooter = page.getByRole('row').filter({ has: page.getByPlaceholder('Filter users') });
+  await usersFooter.getByRole('button', { name: '»' }).click();
+  await page.getByPlaceholder('Filter users').fill('an');
+  await usersFooter.getByRole('button', { name: 'Submit' }).click();
+  await expect(page.getByRole('row', { name: 'Frank Lee' })).toBeVisible();
+
+  await page.getByRole('row', { name: 'Frank Lee' }).getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByRole('row', { name: 'Alan Turing' })).toBeVisible();
+  await expect(page.getByRole('row', { name: 'Kai Chen' })).toBeHidden();
+});
