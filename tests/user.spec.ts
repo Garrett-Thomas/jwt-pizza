@@ -1,5 +1,5 @@
 import { test, expect } from './testSetup';
-import { basicInit } from './mocks';
+import { basicInit, login } from './mocks';
 
 test('updateUserName', async ({ page }) => {
   const email = `user${Math.floor(Math.random() * 10000)}@jwt.com`;
@@ -108,3 +108,41 @@ test('updateUserPassword', async ({ page }) => {
   await expect(page.getByRole('main')).toContainText('pizza diner');
 });
 
+test('updateUser as admin', async ({ page }) => {
+  await basicInit(page);
+  await login(page, 'a@jwt.com', 'admin');
+
+  await page.getByRole('link', { name: 'PA' }).click();
+
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await expect(page.locator('h3')).toContainText('Edit user');
+  await page.getByRole('textbox').first().fill('Pizza Adminx');
+  await page.getByRole('button', { name: 'Update' }).click();
+  await page.waitForSelector('[role="dialog"].hidden', { state: 'attached' });
+
+  await page.getByRole('link', { name: 'Logout' }).click();
+  await login(page, 'a@jwt.com', 'admin');
+
+  await page.getByRole('link', { name: 'PA' }).click();
+
+  await expect(page.getByRole('main')).toContainText('Pizza Adminx');
+  await expect(page.getByRole('main')).toContainText('admin');
+  await expect(page.getByRole('link', { name: 'Admin' })).toBeVisible();
+});
+
+test('updateUser as franchisee', async ({ page }) => {
+  await basicInit(page);
+  await login(page, 'f@jwt.com', 'franchisee');
+
+  await page.getByRole('link', { name: 'FL' }).click();
+
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await expect(page.locator('h3')).toContainText('Edit user');
+  await page.getByRole('textbox').first().fill('Frank Leex');
+  await page.getByRole('button', { name: 'Update' }).click();
+  await page.waitForSelector('[role="dialog"].hidden', { state: 'attached' });
+
+  await expect(page.getByRole('main')).toContainText('Frank Leex');
+  await expect(page.getByRole('main')).toContainText('diner');
+  await expect(page.getByRole('main')).toContainText('Franchisee on 2');
+});
